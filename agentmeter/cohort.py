@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import json
+import re
 from collections import defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
-import json
-import re
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -333,16 +333,20 @@ class CohortExporter:
             if span.span_id not in depth_map:
                 depth_map[span.span_id] = 0
 
+        from .tracer import SpanKind as RuntimeSpanKind
+
         metrics: list[AnonymizedSpanMetric] = []
         for span in trace.spans:
             parent_kind: str | None = None
+            parent_kind_enum: SpanKind | None = None
             if span.parent_span_id is not None and span.parent_span_id in span_by_id:
                 parent_kind = _infer_span_kind(span_by_id[span.parent_span_id])
+                parent_kind_enum = RuntimeSpanKind.from_value(parent_kind)
             metrics.append(
                 CohortExporter.from_span(
                     span,
                     depth=depth_map.get(span.span_id, 0),
-                    parent_span_kind=parent_kind,
+                    parent_span_kind=parent_kind_enum,
                     orchestrator=orchestrator,
                 )
             )

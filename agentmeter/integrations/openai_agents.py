@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 import sys
-from typing import Callable
+from collections.abc import Callable
+from datetime import datetime, timezone
+from typing import Literal, cast
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from agentmeter.core import ExecutionTrace, Span
@@ -17,6 +18,8 @@ _MODEL_PRICES_PER_1K: dict[str, tuple[float, float]] = {
 }
 
 _REGISTERED = False
+SpanOutcome = Literal["success", "failure", "timeout", "unknown"]
+TraceOutcome = Literal["success", "failure", "partial", "unknown"]
 
 
 def _instruction() -> str:
@@ -144,7 +147,7 @@ def _cost_from_model(model: str | None, input_tokens: int | None, output_tokens:
     return round(in_cost + out_cost, 6)
 
 
-def _trace_outcome(spans: list[Span]) -> str:
+def _trace_outcome(spans: list[Span]) -> TraceOutcome:
     """Infer trace outcome from collected span outcomes."""
     if not spans:
         return "unknown"
@@ -176,7 +179,9 @@ def setup_openai_agents_tracing(agent_id: str) -> None:
     tracing_module = getattr(agents, "tracing", None)
     if tracing_module is None:
         try:
-            import agents.tracing as tracing_module  # type: ignore[import-not-found]
+            import agents.tracing as agents_tracing  # type: ignore[import-not-found]
+
+            tracing_module = agents_tracing
         except ImportError as exc:
             raise ImportError(_instruction()) from exc
 
@@ -205,16 +210,18 @@ def setup_openai_agents_tracing(agent_id: str) -> None:
             end = _parse_dt(getattr(trace, "ended_at", None)) or _now_utc()
             if end < start:
                 end = start
-            outcome = _as_str(getattr(trace, "outcome", None))
-            if outcome not in {"success", "failure", "partial", "unknown"}:
-                outcome = _trace_outcome(spans)
+            raw_outcome = _as_str(getattr(trace, "outcome", None))
+            if raw_outcome in {"success", "failure", "partial", "unknown"}:
+                trace_outcome = cast(TraceOutcome, raw_outcome)
+            else:
+                trace_outcome = _trace_outcome(spans)
             trace_model = ExecutionTrace(
                 execution_id=trace_id,
                 root_agent_id=self._trace_root_agent.pop(trace_id, agent_id),
                 started_at=start,
                 ended_at=end,
                 spans=spans,
-                outcome=outcome,
+                outcome=trace_outcome,
             )
             emitter = get_emitter()
             try:
@@ -249,7 +256,7 @@ def setup_openai_agents_tracing(agent_id: str) -> None:
 
             error_obj = getattr(span, "error", None)
             error_message = _as_str(str(error_obj)) if error_obj is not None else None
-            outcome = "failure" if error_message else "success"
+            span_outcome: SpanOutcome = "failure" if error_message else "success"
 
             callee = (
                 _as_str(getattr(span_data, "name", None))
@@ -286,7 +293,7 @@ def setup_openai_agents_tracing(agent_id: str) -> None:
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 cost_usd=cost,
-                outcome=outcome,
+                outcome=span_outcome,
                 error_message=error_message,
                 metadata=metadata,
             )

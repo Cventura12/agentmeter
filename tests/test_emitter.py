@@ -1,17 +1,16 @@
 import io
 import json
 import os
-from pathlib import Path
 import tempfile
+import unittest
+from pathlib import Path
 from threading import Thread
 from typing import Literal
-import unittest
 from unittest.mock import patch
 from uuid import uuid4
 
 from agentmeter.core import ExecutionTrace, Span
 from agentmeter.emitter import BaseEmitter, CompositeEmitter, FileEmitter, StdoutEmitter, configure, get_emitter
-
 
 SpanOutcome = Literal["success", "failure", "timeout", "unknown"]
 TraceOutcome = Literal["success", "failure", "partial", "unknown"]

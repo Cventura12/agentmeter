@@ -1,8 +1,8 @@
 import json
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from uuid import uuid4
 
 from agentmeter.analytics import Analytics, TraceStore

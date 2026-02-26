@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
 import json
-from pathlib import Path
 import re
-from typing import Literal
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
+from typing import Literal, cast
 from uuid import uuid4
 
 from .core import ExecutionTrace, Span
@@ -15,6 +15,8 @@ from .tracer import SpanKind
 
 _SPAN_OUTCOMES = frozenset({"success", "failure", "timeout", "unknown"})
 _TRACE_OUTCOMES = frozenset({"success", "failure", "partial", "unknown"})
+SpanOutcome = Literal["success", "failure", "timeout", "unknown"]
+TraceOutcome = Literal["success", "failure", "partial", "unknown"]
 
 
 def _utc_now() -> datetime:
@@ -82,17 +84,17 @@ def _as_int(value: object) -> int | None:
     return None
 
 
-def _normalize_span_outcome(value: object) -> str:
+def _normalize_span_outcome(value: object) -> SpanOutcome:
     """Normalize span outcomes to the supported literal set."""
     if isinstance(value, str) and value in _SPAN_OUTCOMES:
-        return value
+        return cast(SpanOutcome, value)
     return "unknown"
 
 
-def _normalize_trace_outcome(value: object) -> str:
+def _normalize_trace_outcome(value: object) -> TraceOutcome:
     """Normalize trace outcomes to the supported literal set."""
     if isinstance(value, str) and value in _TRACE_OUTCOMES:
-        return value
+        return cast(TraceOutcome, value)
     return "unknown"
 
 
@@ -181,7 +183,7 @@ def _failure_type(span: Span) -> str:
     return "failure"
 
 
-def _trace_outcome_from_spans(spans: list[Span]) -> str:
+def _trace_outcome_from_spans(spans: list[Span]) -> TraceOutcome:
     """Infer trace-level outcome from span outcomes."""
     if not spans:
         return "unknown"
@@ -621,7 +623,7 @@ class Analytics:
             kind = _span_kind_name(span)
             totals[kind] = totals.get(kind, 0.0) + (span.cost_usd or 0.0)
             counts[kind] = counts.get(kind, 0) + 1
-        rows = [
+        rows: list[dict[str, str | float | int]] = [
             {
                 "span_kind": kind,
                 "total_cost_usd": round(totals[kind], 6),

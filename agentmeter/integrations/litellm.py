@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import sys
-from typing import Callable
+from collections.abc import Callable
+from datetime import datetime, timezone
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from agentmeter.core import Span

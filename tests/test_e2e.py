@@ -14,10 +14,10 @@ The trace finishes with outcome="partial".
 
 from __future__ import annotations
 
-from pathlib import Path
 import json
 import tempfile
 import unittest
+from pathlib import Path
 
 from agentmeter import SpanKind, Tracer, configure
 from agentmeter.analytics import Analytics, TraceStore

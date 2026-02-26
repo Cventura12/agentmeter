@@ -13,14 +13,14 @@ Both tracers share the same public interface:
 
 from __future__ import annotations
 
+import sys
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-import sys
 from threading import Lock, local
 from types import TracebackType
-from typing import Literal
+from typing import Literal, cast
 from uuid import uuid4
 
 from .cohort import AnonymizedSpanMetric, CohortExporter
@@ -51,7 +51,7 @@ class SpanKind(str, Enum):
     EVALUATOR = "evaluator"
 
     @classmethod
-    def from_value(cls, value: str | "SpanKind") -> "SpanKind | None":
+    def from_value(cls, value: str | SpanKind) -> SpanKind | None:
         """Parse a span kind from enum instance, member name, or value."""
         if isinstance(value, cls):
             return value
@@ -82,7 +82,7 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _trace_outcome_from_spans(spans: list[Span]) -> str:
+def _trace_outcome_from_spans(spans: list[Span]) -> ExecutionOutcome:
     """Infer trace outcome from underlying span outcomes."""
     if not spans:
         return "unknown"
@@ -185,7 +185,7 @@ class SpanContext:
         self.input_tokens = input_tokens
         self.output_tokens = output_tokens
 
-    def __enter__(self) -> "SpanContext":
+    def __enter__(self) -> SpanContext:
         """Enter span context and register the span on the tracer stack."""
         self._tracer._open_span(self)
         return self
@@ -195,13 +195,13 @@ class SpanContext:
         exc_type: type[BaseException] | None,
         exc: BaseException | None,
         tb: TracebackType | None,
-    ) -> bool:
+    ) -> Literal[False]:
         """Close span context, persist span, and never suppress exceptions."""
         del tb
         self._tracer._close_span(self, exc)
         return False
 
-    async def __aenter__(self) -> "SpanContext":
+    async def __aenter__(self) -> SpanContext:
         """Async context entry equivalent of `__enter__`."""
         return self.__enter__()
 
@@ -210,7 +210,7 @@ class SpanContext:
         exc_type: type[BaseException] | None,
         exc: BaseException | None,
         tb: TracebackType | None,
-    ) -> bool:
+    ) -> Literal[False]:
         """Async context exit equivalent of `__exit__`."""
         return self.__exit__(exc_type, exc, tb)
 
@@ -256,6 +256,7 @@ class _BaseTracer:
         """Close the execution and return an immutable `ExecutionTrace`."""
         if outcome not in _EXECUTION_OUTCOMES:
             raise ValueError(f"outcome must be one of: {sorted(_EXECUTION_OUTCOMES)}")
+        normalized_outcome = cast(ExecutionOutcome, outcome)
         with self._lock:
             if self._finished_trace is not None:
                 return self._finished_trace
@@ -269,7 +270,7 @@ class _BaseTracer:
                 started_at=self._started_at,
                 ended_at=_utc_now(),
                 spans=list(self._spans),
-                outcome=outcome,
+                outcome=normalized_outcome,
             )
             self._finished_trace = trace
             self._execution_id = None

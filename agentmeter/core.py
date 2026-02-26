@@ -12,8 +12,8 @@ event-stream ingestion.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -203,13 +203,13 @@ class Span(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def _validate_temporal_order(self) -> "Span":
+    def _validate_temporal_order(self) -> Span:
         """Ensure `ended_at` never predates `started_at`."""
         if self.ended_at is not None and self.ended_at < self.started_at:
             raise ValueError("ended_at cannot be before started_at")
         return self
 
-    @computed_field(return_type=float | None)
+    @computed_field(return_type=float | None)  # type: ignore[prop-decorator]
     @property
     def latency_ms(self) -> float | None:
         """Compute latency in milliseconds when both timestamps are known."""
@@ -293,7 +293,7 @@ class AgentCall(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def _validate_temporal_order(self) -> "AgentCall":
+    def _validate_temporal_order(self) -> AgentCall:
         """Default `ended_at` and enforce temporal ordering."""
         if self.ended_at is None:
             self.ended_at = self.started_at + timedelta(milliseconds=self.latency_ms)
@@ -343,19 +343,19 @@ class ExecutionTrace(BaseModel):
         return _validate_utc(value, "ended_at")
 
     @model_validator(mode="after")
-    def _validate_temporal_order(self) -> "ExecutionTrace":
+    def _validate_temporal_order(self) -> ExecutionTrace:
         """Ensure `ended_at` never predates `started_at`."""
         if self.ended_at is not None and self.ended_at < self.started_at:
             raise ValueError("ended_at cannot be before started_at")
         return self
 
-    @computed_field(return_type=float)
+    @computed_field(return_type=float)  # type: ignore[prop-decorator]
     @property
     def total_cost_usd(self) -> float:
         """Compute total cost as the sum of per-span costs."""
         return round(sum(span.cost_usd or 0.0 for span in self.spans), 6)
 
-    @computed_field(return_type=float | None)
+    @computed_field(return_type=float | None)  # type: ignore[prop-decorator]
     @property
     def total_latency_ms(self) -> float | None:
         """Compute execution latency from `started_at` to `ended_at`."""
@@ -363,7 +363,7 @@ class ExecutionTrace(BaseModel):
             return None
         return (self.ended_at - self.started_at).total_seconds() * 1000.0
 
-    @computed_field(return_type=dict[str, int])
+    @computed_field(return_type=dict[str, int])  # type: ignore[prop-decorator]
     @property
     def span_kind_breakdown(self) -> dict[str, int]:
         """Compute per-span-kind counts for this trace."""

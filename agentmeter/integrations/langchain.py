@@ -2,30 +2,37 @@
 
 from __future__ import annotations
 
+import importlib
 from datetime import datetime, timezone
 from threading import Lock
-from typing import TYPE_CHECKING
+from typing import Literal, cast
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from agentmeter.core import Span
 from agentmeter.emitter import get_emitter
 from agentmeter.tracer import SpanKind
 
+
+class _FallbackCallbackHandler:
+    """Fallback base class used only when langchain is unavailable."""
+
+    pass
+
+
+_BaseCallbackHandler: type[object] = _FallbackCallbackHandler
+_LANGCHAIN_IMPORT_ERROR: Exception | None = None
 try:
-    from langchain_core.callbacks import BaseCallbackHandler as _BaseCallbackHandler
-    _LANGCHAIN_IMPORT_ERROR: Exception | None = None
+    callbacks_module = importlib.import_module("langchain_core.callbacks")
+    callback_handler_cls = getattr(callbacks_module, "BaseCallbackHandler", None)
+    if isinstance(callback_handler_cls, type):
+        _BaseCallbackHandler = callback_handler_cls
+    else:
+        raise ImportError("langchain_core.callbacks.BaseCallbackHandler not found")
 except ImportError as exc:  # pragma: no cover - exercised when optional dep missing
     _LANGCHAIN_IMPORT_ERROR = exc
 
-    class _BaseCallbackHandler:  # type: ignore[override]
-        """Fallback base class used only when langchain is unavailable."""
-
-        pass
-
-if TYPE_CHECKING:
-    from langchain_core.outputs import LLMResult
-else:
-    LLMResult = object
+LLMResult = object
+SpanOutcome = Literal["success", "failure", "timeout", "unknown"]
 
 
 def _instruction() -> str:
@@ -144,7 +151,7 @@ class _PendingSpan:
         self.input_tokens: int | None = None
         self.output_tokens: int | None = None
         self.cost_usd: float | None = None
-        self.outcome = "unknown"
+        self.outcome: SpanOutcome = "unknown"
         self.error_message: str | None = None
         self.metadata: dict[str, str] = {
             "framework": "langchain",
@@ -154,7 +161,7 @@ class _PendingSpan:
     def set_outcome(self, outcome: str) -> None:
         """Set normalized outcome for pending span."""
         if outcome in {"success", "failure", "timeout", "unknown"}:
-            self.outcome = outcome
+            self.outcome = cast(SpanOutcome, outcome)
         else:
             self.outcome = "unknown"
 
@@ -164,7 +171,7 @@ class _PendingSpan:
         self.outcome = "failure"
 
 
-class AgentMeterCallbackHandler(_BaseCallbackHandler):
+class AgentMeterCallbackHandler(_BaseCallbackHandler):  # type: ignore[misc,valid-type]
     """LangChain callback handler that emits agentmeter spans."""
 
     def __init__(self, agent_id: str) -> None:
@@ -227,7 +234,7 @@ class AgentMeterCallbackHandler(_BaseCallbackHandler):
             input_tokens=pending.input_tokens,
             output_tokens=pending.output_tokens,
             cost_usd=pending.cost_usd,
-            outcome=pending.outcome,  # type: ignore[arg-type]
+            outcome=pending.outcome,
             error_message=pending.error_message,
             metadata=pending.metadata,
         )

@@ -40,11 +40,12 @@ class Capability(str, Enum):
     UNKNOWN = "unknown"
 
     @classmethod
-    def from_string(cls, value: str) -> "Capability":
+    def from_string(cls, value: str) -> Capability:
         """Return an exact-match capability or `UNKNOWN` when unmatched."""
         if not isinstance(value, str):
             return cls.UNKNOWN
-        return cls._value2member_map_.get(value, cls.UNKNOWN)
+        member = cls._value2member_map_.get(value)
+        return member if isinstance(member, cls) else cls.UNKNOWN
 
     @property
     def category(self) -> str:

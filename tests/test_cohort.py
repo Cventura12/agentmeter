@@ -1,15 +1,14 @@
 import json
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from uuid import uuid4
 
 from agentmeter import configure
 from agentmeter.cohort import AnonymizedSpanMetric, CohortExporter
 from agentmeter.core import ExecutionTrace, Span
 from agentmeter.tracer import SpanKind, Tracer
-
 
 _SPAN_KIND_TO_CAPABILITY: dict[SpanKind, str] = {
     SpanKind.LLM: "generation.summary",

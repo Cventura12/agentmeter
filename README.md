@@ -1,6 +1,11 @@
 # agentmeter
 
-agentmeter instruments multi-agent AI systems to track execution cost, latency, and outcome at the span level — giving you the economic signal your traces are missing.
+[![CI](https://github.com/Cventura12/agentmeter-/actions/workflows/ci.yml/badge.svg)](https://github.com/Cventura12/agentmeter-/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/agentmeter.svg)](https://pypi.org/project/agentmeter/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](#license)
+[![OpenInference compatible](https://img.shields.io/badge/OpenInference-compatible-0A7B83)](https://arize-ai.github.io/openinference/)
+
+agentmeter instruments multi-agent AI systems to track execution cost, latency, and outcome at the span level - giving you the economic signal your traces are missing.
 
 Multi-agent systems fail silently and spend invisibly. LangSmith and Phoenix show you what happened. agentmeter tells you what it cost, what failed, and how it compares.
 

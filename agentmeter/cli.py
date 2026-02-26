@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import argparse
 import csv
-from datetime import datetime, timedelta, timezone
 import json
 import os
-from pathlib import Path
 import sys
 import time
-from typing import Iterable
+from collections.abc import Iterable
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from .analytics import Analytics, TraceStore
 from .core import ExecutionTrace
@@ -181,10 +181,10 @@ def _stats_output(since_label: str, traces: list[ExecutionTrace]) -> int:
         print("none         0ms / 0ms")
     else:
         for kind in sorted(dist_map.keys()):
-            span_kind = SpanKind[kind] if kind in SpanKind.__members__ else None
-            if span_kind is None:
+            span_kind_enum = SpanKind[kind] if kind in SpanKind.__members__ else None
+            if span_kind_enum is None:
                 continue
-            metrics = analytics.latency_percentiles(span_kind=span_kind, percentiles=[50.0, 95.0])
+            metrics = analytics.latency_percentiles(span_kind=span_kind_enum, percentiles=[50.0, 95.0])
             p50 = metrics.get("p50", 0.0)
             p95 = metrics.get("p95", 0.0)
             print(f"{kind:<11} {_format_duration_ms(p50):>6} / {_format_duration_ms(p95):>7}")
@@ -206,10 +206,10 @@ def _stats_output(since_label: str, traces: list[ExecutionTrace]) -> int:
     else:
         for index, row in enumerate(leaderboard, start=1):
             agent_id = str(row["agent_id"])
-            span_kind = str(row["span_kind"])
+            span_kind_label = str(row["span_kind"])
             success_pct = float(row["success_rate"]) * 100.0
             avg_cost_usd = float(row["avg_cost_usd"])
-            print(f"#{index:<2} {agent_id:<18} {span_kind:<10} {success_pct:>3.0f}%  ${avg_cost_usd:.4f}")
+            print(f"#{index:<2} {agent_id:<18} {span_kind_label:<10} {success_pct:>3.0f}%  ${avg_cost_usd:.4f}")
     print(divider)
     return 0
 
