@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentmeter"
+version = "0.1.0"
+description = "Agent execution tracing and economic event emission."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+langchain = [
+    "langchain-core>=0.1",
+]
+litellm = [
+    "litellm>=1.0",
+]
+openai-agents = [
+    "openai-agents>=0.1",
+]
+
+[project.scripts]
+agentmeter = "agentmeter.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["agentmeter*"]
